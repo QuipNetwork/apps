@@ -8,3 +8,4 @@ export { AccountSigner } from './AccountSigner.js';
 export { ApiSigner } from './ApiSigner.js';
 export { LedgerSigner } from './LedgerSigner.js';
 export { QrSigner } from './QrSigner.js';
+export { QuipAccountSigner } from '../quip/QuipAccountSigner.js';

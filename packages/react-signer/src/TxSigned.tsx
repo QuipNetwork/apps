@@ -27,9 +27,10 @@ import { settings } from '@polkadot/ui-settings';
 import { assert, nextTick } from '@polkadot/util';
 import { addressEq } from '@polkadot/util-crypto';
 
-import { AccountSigner, LedgerSigner, QrSigner } from './signers/index.js';
+import { AccountSigner, LedgerSigner, QrSigner, QuipAccountSigner } from './signers/index.js';
 import Address from './Address.js';
 import PayWithAsset from './PayWithAsset.js';
+import { isQuipHybridPair } from './quip/detect.js';
 import Qr from './Qr.js';
 import SignFields from './SignFields.js';
 import Tip from './Tip.js';
@@ -203,6 +204,7 @@ async function wrapTx (api: ApiPromise, currentItem: QueueTx, { isMultiCall, mul
 async function extractParams (api: ApiPromise, address: string, options: Partial<SignerOptions>, getLedger: () => LedgerGeneric | Ledger, setQrState: (state: QrState) => void): Promise<['qr' | 'signing', string, Partial<SignerOptions>, boolean]> {
   const pair = keyring.getPair(address);
   const { meta: { accountOffset, addressOffset, isExternal, isHardware, isInjected, isLocal, isProxied, source } } = pair;
+  const isQuipHybrid = isQuipHybridPair(pair);
 
   if (isHardware) {
     return ['signing', address, { ...options, signer: new LedgerSigner(api, getLedger, accountOffset || 0, addressOffset || 0) }, false];
@@ -224,7 +226,7 @@ async function extractParams (api: ApiPromise, address: string, options: Partial
 
   assert(addressEq(address, pair.address), `Unable to retrieve keypair for ${address}`);
 
-  return ['signing', address, { ...options, signer: new AccountSigner(api.registry, pair) }, false];
+  return ['signing', address, { ...options, signer: isQuipHybrid ? new QuipAccountSigner(api.registry, pair) : new AccountSigner(api.registry, pair) }, false];
 }
 
 function tryExtract (address: string | null): AddressFlags {
@@ -330,6 +332,15 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
       if (senderInfo.signAddress && currentItem.payload) {
         const { id, payload, signerCb = NOOP } = currentItem;
         const pair = keyring.getPair(senderInfo.signAddress);
+        const isQuipHybrid = isQuipHybridPair(pair);
+
+        if (isQuipHybrid) {
+          throw new Error(
+            'Quip hybrid local payload signing is not implemented yet. ' +
+            'The account was routed through the Quip signer seam, but the sr25519_mldsa44 backend is still missing.'
+          );
+        }
+
         const result = api.createType('ExtrinsicPayload', payload, { version: payload.version }).sign(pair);
 
         signerCb(id, { id, ...result });
