@@ -1,0 +1,3 @@
+[submodule "quip-protocol-rs"]
+	path = quip-protocol-rs
+	url = git@gitlab.com:quip.network/quip-protocol-rs.git
