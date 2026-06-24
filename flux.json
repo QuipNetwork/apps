@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "appName": "quipapps",
+  "plan": "custom",
+  "runtime": "Node.js",
+  "runtimeVersion": "18",
+  "installCommand": "corepack enable && yarn install --immutable",
+  "buildCommand": "yarn build:www",
+  "outputDir": "packages/apps/build",
+  "appPort": 80,
+  "envVars": [
+    { "key": "QUIP_DEV_SIGNER", "value": "1" },
+    { "key": "WS_URL", "value": "wss://bootnode-1.testnet.quip.network:20049/rpc" },
+    { "key": "BUILD_TIMEOUT", "value": "5400" }
+  ],
+  "instances": 3,
+  "cpu": 2,
+  "ram": 8192,
+  "hdd": 5,
+  "pollingInterval": "disabled",
+  "autoDeploy": false
+}
