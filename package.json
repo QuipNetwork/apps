@@ -106,7 +106,7 @@
     "@polkadot/rpc-core": "^16.5.6",
     "@polkadot/rpc-provider": "^16.5.6",
     "@polkadot/typegen": "^16.5.6",
-    "@polkadot/types": "^16.5.6",
+    "@polkadot/types": "patch:@polkadot/types@npm%3A16.5.6#~/.yarn/patches/@polkadot-types-npm-16.5.6-6fe2703ed8.patch",
     "@polkadot/types-augment": "^16.5.6",
     "@polkadot/types-codec": "^16.5.6",
     "@polkadot/types-create": "^16.5.6",

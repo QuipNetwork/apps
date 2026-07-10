@@ -2776,7 +2776,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@polkadot/types@npm:^16.5.6":
+"@polkadot/types@npm:16.5.6":
   version: 16.5.6
   resolution: "@polkadot/types@npm:16.5.6"
   dependencies:
@@ -2789,6 +2789,22 @@ __metadata:
     rxjs: "npm:^7.8.1"
     tslib: "npm:^2.8.1"
   checksum: 10/85c3ad043d16216f9b49fbb613d17c0af70ba817f20c3fa287e0ff628d3a5338ce4e7505e74a59610f1eb0b4f26b2a8701c3f25c1e90f7c95f2e3bde1fc5391b
+  languageName: node
+  linkType: hard
+
+"@polkadot/types@patch:@polkadot/types@npm%3A16.5.6#~/.yarn/patches/@polkadot-types-npm-16.5.6-6fe2703ed8.patch":
+  version: 16.5.6
+  resolution: "@polkadot/types@patch:@polkadot/types@npm%3A16.5.6#~/.yarn/patches/@polkadot-types-npm-16.5.6-6fe2703ed8.patch::version=16.5.6&hash=9b49a6"
+  dependencies:
+    "@polkadot/keyring": "npm:^14.0.3"
+    "@polkadot/types-augment": "npm:16.5.6"
+    "@polkadot/types-codec": "npm:16.5.6"
+    "@polkadot/types-create": "npm:16.5.6"
+    "@polkadot/util": "npm:^14.0.3"
+    "@polkadot/util-crypto": "npm:^14.0.3"
+    rxjs: "npm:^7.8.1"
+    tslib: "npm:^2.8.1"
+  checksum: 10/364794496a194162575e2e4d3e008905419e71de7195733311a4da1d057d3653cf3a1f918743c7e2a95cadc44e8fed9e1cc806e5374bd9f88ccc3cfd19a48760
   languageName: node
   linkType: hard
 
