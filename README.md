@@ -29,6 +29,21 @@ To get started -
 5. Ready! Now you can launch the UI (assuming you have a local Polkadot Node running), via `yarn run start`
 6. Access the UI via [http://localhost:3000](http://localhost:3000)
 
+### Quip extrinsic decoding
+
+This fork carries a Yarn patch for `@polkadot/types` so Apps can decode Quip
+blocks that contain V5 bare inherents and V4 signed transactions. Quip uses a
+custom hybrid transaction signature envelope instead of the standard
+`MultiSignature`. The upstream decoder previously inferred signed-ness from
+whether the decoded signature object looked empty; that heuristic breaks for a
+struct-like custom signature because a default struct can look non-empty even
+when the extrinsic wire byte marks the item as bare/unsigned.
+
+The patch makes the decoder trust the explicit `isSigned` flag derived from the
+extrinsic version/type byte. This preserves compatibility with valid SDK-format
+blocks such as `0x05` bare V5 inherents followed by `0x84` signed V4
+transactions.
+
 
 ## Docker
 
