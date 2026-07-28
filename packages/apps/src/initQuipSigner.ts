@@ -1,6 +1,8 @@
 // Copyright 2017-2026 @polkadot/apps authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { GenericExtrinsicSignatureV4 } from '@polkadot/types';
+
 const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on']);
 const STORAGE_KEY = 'quip:devSigner';
 
@@ -20,6 +22,7 @@ const DEV_SEEDS = [
 ];
 
 interface QuipDevProvider {
+  hasAccount: (address: string) => boolean;
   importMnemonic: (
     name: string,
     mnemonic: string,
@@ -33,6 +36,7 @@ interface QuipDevProvider {
  * (which would be a circular dependency).
  */
 export interface QuipSignerUiApi {
+  canSign: (address: string) => boolean;
   importMnemonic: (name: string, mnemonic: string) => Promise<string>;
 }
 
@@ -70,7 +74,13 @@ function isEnabledByStorage (): boolean {
   }
 }
 
-function shouldInjectQuipSigner (): boolean {
+export function shouldInjectQuipSigner (): boolean {
+  // The page-memory seed provider is intentionally development-only. Query
+  // parameters and localStorage must never turn it on in a production bundle.
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
+
   return isEnabledValue(process.env.QUIP_DEV_SIGNER) ||
     isEnabledByQuery() ||
     isEnabledByStorage();
@@ -84,8 +94,8 @@ export async function initQuipSigner (): Promise<void> {
   isInjected = true;
 
   const [signerModule, wasmModule] = await Promise.all([
-    import('../../../quip-protocol-rs/js/quip-signer/src/index.js'),
-    import('../../../quip-protocol-rs/js/quip-transaction-crypto-wasm/quip_transaction_crypto_wasm.js')
+    import('../../../../quip-protocol-rs/js/quip-signer/src/index.js'),
+    import('../../../../quip-protocol-rs/js/quip-transaction-crypto-wasm/quip_transaction_crypto_wasm.js')
   ]);
 
   await wasmModule.default();
@@ -93,7 +103,7 @@ export async function initQuipSigner (): Promise<void> {
   // Quip's hybrid signature (3828 bytes) is larger than polkadot-js's hardcoded
   // 256-byte fake signature, which breaks `paymentInfo`/fee estimation. Patch
   // signFake to size the fake from the registry before any tx flow runs.
-  signerModule.patchExtrinsicSignFake();
+  signerModule.patchExtrinsicSignFake(GenericExtrinsicSignatureV4);
 
   const { accounts, provider } = await signerModule.DevSeedProvider.fromSeeds(wasmModule, DEV_SEEDS);
 
@@ -103,7 +113,10 @@ export async function initQuipSigner (): Promise<void> {
   });
 
   quipProvider = provider;
-  globalThis.quipSigner = { importMnemonic: importQuipMnemonic };
+  globalThis.quipSigner = {
+    canSign: (address) => provider.hasAccount(address),
+    importMnemonic: importQuipMnemonic
+  };
 
   console.info(`Quip dev signer injected ${accounts.length} account${accounts.length === 1 ? '' : 's'}`);
 }
