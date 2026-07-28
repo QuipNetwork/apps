@@ -57,6 +57,38 @@ const EMPTY_INNER: InnerTx = { innerHash: null, innerTx: null };
 
 let qrId = 0;
 
+interface QuipSignerUiApi {
+  canSign: (address: string) => boolean;
+}
+
+function quipSigningError (address: string | null): string | null {
+  if (!address) {
+    return null;
+  }
+
+  let source: unknown;
+
+  try {
+    source = keyring.getPair(address).meta.source;
+  } catch {
+    return null;
+  }
+
+  if (source !== 'quip') {
+    return null;
+  }
+
+  const quipSigner = (globalThis as unknown as { quipSigner?: QuipSignerUiApi }).quipSigner;
+
+  if (!quipSigner) {
+    return 'Quip signing is unavailable. Enable the development signer or connect a Quip signer.';
+  }
+
+  return quipSigner.canSign(address)
+    ? null
+    : 'This is a view-only Quip account. Its signing key is not available.';
+}
+
 function unlockAccount ({ isUnlockCached, signAddress, signPassword }: AddressProxy): string | null {
   let publicKey;
 
@@ -215,9 +247,15 @@ async function extractParams (api: ApiPromise, address: string, options: Partial
       throw new Error(`Unable to find injected source for ${address}`);
     }
 
+    const unavailable = quipSigningError(address);
+
+    if (unavailable) {
+      throw new Error(unavailable);
+    }
+
     const injected = await web3FromSource(source);
 
-    assert(injected, `Unable to find a signer for ${address}`);
+    assert(injected?.signer, `Injected signer "${source}" is unavailable for ${address}`);
 
     return ['signing', address, { ...options, signer: injected.signer }, false];
   }
@@ -256,7 +294,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
 
   useEffect((): void => {
     setFlags(tryExtract(senderInfo.signAddress));
-    setPasswordError(null);
+    setPasswordError(quipSigningError(senderInfo.signAddress));
   }, [senderInfo]);
 
   // when we are sending the hash only, get the wrapped call for display (proxies if required)
@@ -420,6 +458,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   }, [flags.isQr, flags.isLocal, isSubmit, t]);
 
   const isAutoCapable = senderInfo.signAddress && (queueSize > 1) && isSubmit && !(flags.isHardware || flags.isMultisig || flags.isProxied || flags.isQr || flags.isUnlockable) && !isRenderError;
+  const isQuipSigningUnavailable = !!quipSigningError(senderInfo.signAddress);
 
   if (!isBusy && isAutoCapable && initialIsQueueSubmit) {
     setBusy(true);
@@ -508,7 +547,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
               : 'sign-in-alt'
           }
           isBusy={isBusy}
-          isDisabled={!senderInfo.signAddress || isRenderError}
+          isDisabled={!senderInfo.signAddress || isRenderError || isQuipSigningUnavailable}
           label={signLabel}
           onClick={_doStart}
           tabIndex={2}
