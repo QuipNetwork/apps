@@ -94,8 +94,8 @@ export async function initQuipSigner (): Promise<void> {
   isInjected = true;
 
   const [signerModule, wasmModule] = await Promise.all([
-    import('../../../../quip-protocol-rs/js/quip-signer/src/index.js'),
-    import('../../../../quip-protocol-rs/js/quip-transaction-crypto-wasm/quip_transaction_crypto_wasm.js')
+    import('../../../../quip-validator/js/quip-signer/src/index.js'),
+    import('../../../../quip-validator/js/quip-transaction-crypto-wasm/quip_transaction_crypto_wasm.js')
   ]);
 
   await wasmModule.default();
