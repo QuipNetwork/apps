@@ -380,10 +380,24 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   const _onSend = useCallback(
     async (queueSetTxStatus: QueueTxMessageSetStatus, currentItem: QueueTx, senderInfo: AddressProxy): Promise<void> => {
       if (senderInfo.signAddress) {
-        const [tx, [status, pairOrAddress, options, isMockSign]] = await Promise.all([
-          wrapTx(api, currentItem, senderInfo),
-          extractParams(api, senderInfo.signAddress, { nonce: -1, tip, withSignedTransaction: true, ...signedOptions }, getLedger, setQrState)
-        ]);
+        let prepared: [SubmittableExtrinsic<'promise'>, ['qr' | 'signing', string, Partial<SignerOptions>, boolean]];
+
+        try {
+          prepared = await Promise.all([
+            wrapTx(api, currentItem, senderInfo),
+            extractParams(api, senderInfo.signAddress, { nonce: -1, tip, withSignedTransaction: true, ...signedOptions }, getLedger, setQrState)
+          ]);
+        } catch (error) {
+          // wrapTx/extractParams run before any status update — surface their
+          // failures (e.g. an unavailable signing key) on the queue item
+          // instead of leaving it pending, then rethrow so the modal's error
+          // handler still fires.
+          queueSetTxStatus(currentItem.id, 'error', {}, error as Error);
+
+          throw error;
+        }
+
+        const [tx, [status, pairOrAddress, options, isMockSign]] = prepared;
 
         queueSetTxStatus(currentItem.id, status);
 
@@ -396,10 +410,21 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   const _onSign = useCallback(
     async (queueSetTxStatus: QueueTxMessageSetStatus, currentItem: QueueTx, senderInfo: AddressProxy): Promise<void> => {
       if (senderInfo.signAddress) {
-        const [tx, [, pairOrAddress, options, isMockSign]] = await Promise.all([
-          wrapTx(api, currentItem, senderInfo),
-          extractParams(api, senderInfo.signAddress, { ...signedOptions, tip, withSignedTransaction: true }, getLedger, setQrState)
-        ]);
+        let prepared: [SubmittableExtrinsic<'promise'>, ['qr' | 'signing', string, Partial<SignerOptions>, boolean]];
+
+        try {
+          prepared = await Promise.all([
+            wrapTx(api, currentItem, senderInfo),
+            extractParams(api, senderInfo.signAddress, { ...signedOptions, tip, withSignedTransaction: true }, getLedger, setQrState)
+          ]);
+        } catch (error) {
+          // See _onSend: report pre-signing failures on the queue item.
+          queueSetTxStatus(currentItem.id, 'error', {}, error as Error);
+
+          throw error;
+        }
+
+        const [tx, [, pairOrAddress, options, isMockSign]] = prepared;
 
         setSignedTx(await signAsync(queueSetTxStatus, currentItem, tx, pairOrAddress, options, api, isMockSign));
       }
