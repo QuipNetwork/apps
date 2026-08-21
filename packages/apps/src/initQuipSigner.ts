@@ -17,7 +17,7 @@ const DEV_SEEDS = [
   },
   {
     name: 'Quip Alice Stash',
-    seedHex: '0x3c881bc4d45926680c64a7f9315eeda3dd287f8d598f3653d7c107799c5422b3'
+    seedHex: '0xb90db6316bab975669a759e36b8de8acbe91065eef95cfd4ff34e9bead8f0a5f'
   }
 ];
 
@@ -94,13 +94,15 @@ export async function initQuipSigner (): Promise<void> {
   isInjected = true;
 
   const [signerModule, wasmModule] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore -- signer source intentionally lives outside this package's rootDir
     import('../../../../quip-validator/js/quip-signer/src/index.js'),
     import('../../../../quip-validator/js/quip-transaction-crypto-wasm/quip_transaction_crypto_wasm.js')
   ]);
 
   await wasmModule.default();
 
-  // Quip's hybrid signature (3828 bytes) is larger than polkadot-js's hardcoded
+  // Quip's hybrid signature envelope (1660 bytes) is larger than polkadot-js's hardcoded
   // 256-byte fake signature, which breaks `paymentInfo`/fee estimation. Patch
   // signFake to size the fake from the registry before any tx flow runs.
   signerModule.patchExtrinsicSignFake(GenericExtrinsicSignatureV4);
