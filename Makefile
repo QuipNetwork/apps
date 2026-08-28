@@ -1,6 +1,6 @@
 # Quip hybrid-signature integration for the polkadot-js apps fork.
 #
-# The Quip transaction signer (sr25519 + ML-DSA-44 hybrid) lives in the
+# The Quip transaction signer (H4 sr25519 + FN-DSA-512 hybrid) lives in the
 # `quip-validator` git submodule, pinned to a specific commit. Its browser
 # WASM is a generated, git-ignored artifact, so it must be built locally before
 # the dev signer (packages/apps/src/initQuipSigner.ts) can load it.
