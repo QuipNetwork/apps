@@ -11,7 +11,7 @@
   "appPort": 80,
   "envVars": [
     { "key": "QUIP_DEV_SIGNER", "value": "1" },
-    { "key": "WS_URL", "value": "wss://bootnode-1.testnet.quip.network:20049/rpc" },
+    { "key": "WS_URL", "value": "wss://bootnode-1.aglais.quip.network:20049/rpc" },
     { "key": "BUILD_TIMEOUT", "value": "5400" }
   ],
   "instances": 3,

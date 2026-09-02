@@ -2,17 +2,17 @@
 /* eslint-disable */
 
 /**
- * Derive the compact 32-byte Quip account id from serialized H3 public bytes.
+ * Derive the compact 32-byte Quip account id from serialized H4 public bytes.
  */
 export function accountIdFromPublic(public_hex: string): string;
 
 /**
- * Derive serialized H3 public key bytes from a 32-byte H3 seed.
+ * Derive serialized H4 public key bytes from a 32-byte H4 seed.
  */
 export function publicFromSeed(seed_hex: string): string;
 
 /**
- * Derive the 32-byte H3 master seed from a limited secret URI.
+ * Derive the 32-byte H4 master seed from a limited secret URI.
  *
  * Accepts a `0x`-prefixed 64-digit hex seed, or an English BIP39 phrase
  * optionally followed by `///<password>`. Derivation junctions (`//`, `/`) are
@@ -24,6 +24,14 @@ export function seedFromMnemonic(secret_uri: string): string;
 /**
  * Sign SCALE-encoded transaction payload bytes and return a SCALE-encoded
  * `HybridTxSignature` envelope.
+ *
+ * The payload hex is signed **exactly as given**: no hashing, no length check.
+ * The H4 domain prefix (`0x01 || "hybrid-sr25519-falcon512-v1\0" || ...`) is
+ * applied intrinsically by the scheme, so callers must not pre-apply it.
+ * Substrate's `SignedPayload` rule — `blake2_256(payload)` when the encoded
+ * payload exceeds 256 bytes — is an extrinsic convention and the caller's
+ * responsibility; the higher-level `QuipSigner` (`signRaw`) applies it, so
+ * callers using that path get it for free.
  */
 export function signPayloadFromSeed(seed_hex: string, payload_hex: string): string;
 

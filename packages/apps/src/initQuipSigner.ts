@@ -100,9 +100,10 @@ export async function initQuipSigner (): Promise<void> {
 
   await wasmModule.default();
 
-  // Quip's hybrid signature (3828 bytes) is larger than polkadot-js's hardcoded
-  // 256-byte fake signature, which breaks `paymentInfo`/fee estimation. Patch
-  // signFake to size the fake from the registry before any tx flow runs.
+  // Quip's hybrid signature envelope (1660 bytes) is larger than polkadot-js's
+  // hardcoded 256-byte fake signature, which breaks `paymentInfo`/fee
+  // estimation. Patch signFake to size the fake from the registry before any tx
+  // flow runs.
   signerModule.patchExtrinsicSignFake(GenericExtrinsicSignatureV4);
 
   const { accounts, provider } = await signerModule.DevSeedProvider.fromSeeds(wasmModule, DEV_SEEDS);
