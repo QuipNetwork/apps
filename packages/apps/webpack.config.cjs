@@ -22,7 +22,9 @@ module.exports = merge(
     plugins: [
       new SubresourceIntegrityPlugin(),
       new HtmlWebpackPlugin({
-        PAGE_TITLE: 'Polkadot/Substrate Portal',
+        // Keep in lockstep with webpack.serve.cjs, or `yarn start` shows a
+        // different title from production and local checks lie.
+        PAGE_TITLE: 'Quip Network — Aglais Portal',
         minify: false,
         template: path.join(context, `${hasPublic ? 'public/' : ''}index.html`)
       })

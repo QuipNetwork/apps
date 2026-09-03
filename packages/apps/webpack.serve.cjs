@@ -22,7 +22,8 @@ module.exports = merge(
     },
     plugins: [
       new HtmlWebpackPlugin({
-        PAGE_TITLE: 'Polkadot/Substrate Portal',
+        // Keep in lockstep with webpack.config.cjs.
+        PAGE_TITLE: 'Quip Network — Aglais Portal',
         inject: true,
         template: path.join(__dirname, 'public/index.html')
       })

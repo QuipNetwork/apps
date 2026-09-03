@@ -11,6 +11,7 @@
   "rpc.header.live": "Live networks",
   "rpc.header.paseo.relay": "Test Paseo & parachains",
   "rpc.header.polkadot.relay": "Polkadot & parachains",
+  "rpc.header.quip": "Quip Network",
   "rpc.header.rococo.relay": "Test Rococo & parachains",
   "rpc.header.test": "Test networks",
   "rpc.header.westend.relay": "Test Westend & parachains",

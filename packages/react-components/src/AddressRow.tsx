@@ -10,6 +10,7 @@ import { useAccountInfo } from '@polkadot/react-hooks';
 import BaseIdentityIcon from '@polkadot/react-identicon';
 
 import IdentityIcon from './IdentityIcon/index.js';
+import { colorLink } from './styles/theme.js';
 import Row from './Row.js';
 import { styled } from './styled.js';
 
@@ -70,7 +71,7 @@ export { AddressRow, DEFAULT_ADDR };
 const StyledRow = styled(Row)`
   button.u.ui--Icon.editButton {
     padding: 0 .3em .3em .3em;
-    color: #2e86ab;
+    color: ${colorLink};
     background: none;
     /*trick to let the button in the flow but keep the content centered regardless*/
     margin-left: -2em;

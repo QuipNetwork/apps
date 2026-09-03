@@ -44,6 +44,81 @@ extrinsic version/type byte. This preserves compatibility with valid SDK-format
 blocks such as `0x05` bare V5 inherents followed by `0x84` signed V4
 transactions.
 
+### Quip branding (QUI-1276)
+
+Minimal only: colour, logo, favicon, page title. No redesign, no layout change.
+
+It goes through the one extension point `apps-config` documents (see
+[packages/apps-config/README.md](packages/apps-config/README.md), "Endpoints"):
+a chain entry carrying `ui.color` and `ui.logo`. `useEndpoint` matches the
+connected URL against that entry's providers, so the branding follows whichever
+bootnode the user is on. Nothing in `react-components/src/styles` or
+`public/index.html`'s CSS variables is touched — those are undocumented
+internals.
+
+| what | where |
+|---|---|
+| Chain entry | `packages/apps-config/src/endpoints/quip.ts`, its own file and its own picker group, so upstream rebases conflict only in `endpoints/index.ts` |
+| Colour | `ui.color: '#09090b'` — zinc-950, `quip-brand@b2ae38b` `tokens/core.css` |
+| Coral | `colorLink` in `react-components/src/styles/theme.ts` → `#c93a3f` (`--coral-text`) |
+| Logo | `packages/apps-config/src/ui/logos/nodes/quip.svg`, regenerate with `node scripts/quipBrandMark.mjs` then `yarn build:images` |
+| Favicons | `packages/apps/public/favicon.{svg,ico}` + `apple-touch-icon.png`, regenerate with `node scripts/quipFavicon.mjs` |
+| Title | `Quip Network — Aglais Portal`, in **both** `webpack.config.cjs` and `webpack.serve.cjs` |
+| Default endpoint | `QUIP_DEFAULT_URL` in `packages/apps/src/initSettings.ts` |
+
+Both `scripts/quip*.mjs` are regeneration tools, not build steps — their outputs
+are committed, so the Flux build needs no rasteriser. `quipBrandMark.mjs` asserts
+the source lockup's structure, so a change in `quip-brand` fails loudly instead
+of silently emitting a wrong mark.
+
+⚠ **The accent must be zinc-950, not zinc-900.** `getMenuHoverContrast`
+(`react-components/src/styles/index.ts`) only returns a white hover overlay below
+brightness 16. zinc-900 `#18181b` — the brand's own `--surface-dark`, and the
+intuitive pick — measures 24.2 and gets a *black* overlay instead, which on a
+near-black bar is a ~1.4%/channel change and reads as no hover at all. zinc-950
+measures 9.1. Both are real brand tokens; the darker one is chosen for that
+mechanical reason. Verify in the browser: the emitted rule for
+`.ui--MenuItem.topLevel:hover a` must be `rgba(255, 255, 255, 0.15)`.
+
+⚠ **Coral cannot be the bar.** Against the near-white text `getContrast` pairs
+with it, canonical `#FF6C78` is 2.7:1 and fails AA. Coral appears only as
+`colorLink`, which paints links and small glyphs on light surfaces — exactly what
+`--coral-text` is for, and an improvement on upstream's `#2e86ab` (4.1:1).
+`colorBtnHighlight` in the same file is a dead export with no consumers and is
+deliberately left alone.
+
+⚠ **Fonts are deliberately NOT shipped.** ABC Gaisyr / Favorit / Favorit Mono are
+licensed from Dinamo and `quip-brand` forbids serving them from a public host.
+This portal is public, so no `@font-face` is added and the system fallbacks
+stand. Verify with `find packages/apps/build -iname '*Favorit*' -o -iname '*Gaisyr*'`
+returning nothing.
+
+⚠ **`yarn build:www` does not typecheck** — `webpack.base.cjs` runs `ts-loader`
+with `transpileOnly: true`, so a type error builds and deploys silently. Run
+`npx tsc --noEmit -p tsconfig.build.json` separately.
+
+⚠ **Run the endpoint spec with `WS_URL` unset:**
+`env -u WS_URL yarn test:one packages/apps-config/src/endpoints/index.spec.ts`.
+With `WS_URL` exported, `createCustom` emits an entry sharing a bootnode URL and
+"urls are not duplicated" fails by construction. That is a harness artefact — do
+not "fix" it by dropping a bootnode from `providers`.
+
+⚠ **`yarn lint` runs `eslint --fix`** and rewrites files, including the vendored
+signer under `packages/apps/src/quip-signer-vendor/`. Check `git status` after.
+
+⚠ **Verifying a deploy: compare content, never status codes.** The Flux app is
+served by `serve -s`, which returns 200 with `index.html` for any missing path,
+so a status check is fail-open. `index.html` is the one unhashed entry point;
+byte-compare it against a local build, then hash every referenced asset plus the
+unhashed statics (`favicon.*`, `apple-touch-icon.png`, `manifest.json`). SRI
+covers most but not all chunks, so do not treat `index.html` equality alone as
+proof.
+
+Still upstream-branded and deliberately out of scope: the GitHub/Wiki links in
+`packages/apps/src/Menu/index.tsx`, the hardcoded `#3BBEFF` / `#E6007A` tooltip
+links in `react-components/src/styles/components.ts`, and the stale
+`packages/apps/public/ipfs/index.html` redirect.
+
 
 ## Docker
 
