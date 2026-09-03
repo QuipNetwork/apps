@@ -1,6 +1,8 @@
 // Copyright 2017-2026 @polkadot/react-components authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import { colorLink } from './theme.js';
+
 export default `
   .ui--output {
     background: var(--bg-input);
@@ -37,7 +39,7 @@ export default `
     padding-right: 0;
     padding-bottom: 0.3em;
     padding-left: 0.3em;
-    color: #2e86ab !important;
+    color: ${colorLink} !important;
     background: none !important;
   }
 

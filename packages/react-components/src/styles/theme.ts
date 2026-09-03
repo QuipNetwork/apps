@@ -15,7 +15,12 @@ export const colorBtnPrimary = colorBtnDefault; // '#2e86ab';
 /* button text color */
 export const colorBtnText = '#f9f8f7';
 
-export const colorLink = '#2e86ab';
+/* links, quip-brand@b2ae38b tokens/accents.css --coral-text.
+   Coral is the brand's one interactive accent, but raw #FF6C78 is 2.7:1 on
+   white and fails AA below ~24px; #c93a3f is the documented AA-safe variant for
+   coral text and small glyphs on light surfaces, which is exactly what this
+   paints. At 5.0:1 it also improves on upstream's #2e86ab, which was 4.1:1. */
+export const colorLink = '#c93a3f';
 
 export default `
   .theme--dark,

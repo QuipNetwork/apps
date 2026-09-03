@@ -6,12 +6,14 @@ import type { LinkOption } from './types.js';
 
 import { createCustom, createDev, createOwn } from './development.js';
 import { prodChains, prodRelayKusama, prodRelayPolkadot } from './production.js';
+import { quipChains } from './quip.js';
 import { testChains, testRelayWestend } from './testing.js';
 import { testRelayPaseo } from './testingRelayPaseo.js';
 import { expandEndpoints } from './util.js';
 
 export { CUSTOM_ENDPOINT_KEY } from './development.js';
 export * from './production.js';
+export * from './quip.js';
 export * from './testing.js';
 
 function defaultT (keyOrText: string, text?: string | TOptions, options?: TOptions): string {
@@ -23,8 +25,11 @@ function defaultT (keyOrText: string, text?: string | TOptions, options?: TOptio
 }
 
 export function createWsEndpoints (t: TFunction = defaultT, firstOnly = false, withSort = true): LinkOption[] {
-  // Collect all endpoint configs to pass to createCustom for UI lookup
+  // Collect all endpoint configs to pass to createCustom for UI lookup.
+  // Quip goes first so findUiForUrl resolves our own WS_URL against our entry
+  // before scanning the upstream endpoint list.
   const allEndpoints = [
+    ...quipChains,
     prodRelayPolkadot,
     prodRelayKusama,
     testRelayWestend,
@@ -44,6 +49,16 @@ export function createWsEndpoints (t: TFunction = defaultT, firstOnly = false, w
       ui: {},
       value: ''
     },
+    {
+      isDisabled: false,
+      isHeader: true,
+      isSpaced: true,
+      text: t('rpc.header.quip', 'Quip Network', { ns: 'apps-config' }),
+      textBy: '',
+      ui: {},
+      value: ''
+    },
+    ...expandEndpoints(t, quipChains, firstOnly, withSort),
     {
       isDisabled: false,
       isHeader: true,
