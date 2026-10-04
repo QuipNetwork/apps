@@ -4,6 +4,10 @@ on:
     branches:
       - master
 
+# Least privilege: restrict GITHUB_TOKEN permissions to read-only by default.
+permissions:
+  contents: read
+
 jobs:
   # publish to gh-pages (& IPFS when a release is detected)
   www:
@@ -13,11 +17,11 @@ jobs:
         step: ['build:release:www']
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
         token: ${{ secrets.GH_PAT_BOT }}
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
         node-version: 'lts/*'
     - name: Set Execute Permissions
@@ -42,8 +46,8 @@ jobs:
     if: "startsWith(github.event.head_commit.message, '[CI Skip] release/stable')"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
         node-version: 'lts/*'
     - name: Set Execute Permissions
@@ -64,24 +68,16 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         token: ${{ secrets.GH_PAT_BOT }}
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
       with:
         node-version: 'lts/*'
-    # Removed `macos-latest` since notarization errors.
-    # ref: https://github.com/polkadot-js/apps/issues/10486
-    # - name: Prepare for app notarization (macOS)
-    #   if: startsWith(matrix.os, 'macos')
-    #   # Import Apple API key for app notarization on macOS
-    #   run: |
-    #     mkdir -p ~/private_keys/
-    #     echo '${{ secrets.API_KEY }}' > ~/private_keys/AuthKey_${{ secrets.API_KEY_ID }}.p8
     - name: Set Execute Permissions
       run: chmod +x ./scripts/*
     - name: Build/release Electron app
-      uses: samuelmeuli/action-electron-builder@v1
+      uses: samuelmeuli/action-electron-builder@2f2eb67e750eef53fe3eb5ee98858e7456d9536d # v1.6.0
       with:
         # Base64-encoded code signing certificate for macOS
         mac_certs: ${{ secrets.MAC_CERTS }}

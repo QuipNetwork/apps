@@ -4,9 +4,26 @@ on:
   pull_request:
     types: [labeled]
 
+# Least privilege: the default GITHUB_TOKEN is not usable by this workflow (a
+# PAT is supplied explicitly), and pinning the built-in token to read-only
+# prevents a future edit from silently granting write access to the repo.
+permissions:
+  contents: read
+
 jobs:
   approve:
-    if: "! startsWith(github.event.head_commit.message, '[CI Skip]') && (!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository)"
+    # `head_commit` is only populated on `push` events, so on this workflow's
+    # `pull_request` trigger it is null and `startsWith(null, ...)` evaluated to
+    # false — the guard was inert and the approve step would have run for ANY
+    # labelled PR. The real protection is the second clause: only approve when
+    # the head repo is this same repository, so fork PRs (whose code is
+    # untrusted) are never auto-approved with a write-scoped PAT.
+    #
+    # The commit-message escape hatch is kept, but reads the field that actually
+    # exists on a pull_request event (`pull_request.head.sha` has no message, so
+    # the skip marker is taken from the title, which the author controls and
+    # maintainers can see).
+    if: "(!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository) && !contains(github.event.pull_request.title, '[CI Skip]')"
     runs-on: ubuntu-latest
     steps:
       - uses: jacogr/action-approve@795afd1dd096a2071d7ec98740661af4e853b7da
