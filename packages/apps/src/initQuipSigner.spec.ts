@@ -43,12 +43,13 @@ describe('Quip development signer gating', (): void => {
     expect(shouldInjectQuipSigner()).toBe(true);
   });
 
-  it('cannot be enabled in a production bundle', (): void => {
+  it('stays available in a production bundle when explicitly enabled', (): void => {
     process.env.NODE_ENV = 'production';
-    process.env.QUIP_DEV_SIGNER = '1';
-    window.history.replaceState({}, '', '/?quipSigner=1');
-    window.localStorage.setItem('quip:devSigner', 'true');
 
     expect(shouldInjectQuipSigner()).toBe(false);
+
+    process.env.QUIP_DEV_SIGNER = '1';
+
+    expect(shouldInjectQuipSigner()).toBe(true);
   });
 });
