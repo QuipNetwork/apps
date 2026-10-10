@@ -74,13 +74,13 @@ function isEnabledByStorage (): boolean {
   }
 }
 
+// A deployed portal serves a `yarn build:www` bundle, which webpack builds
+// with `mode: 'production'`. A `NODE_ENV === 'production'` short-circuit here
+// would therefore fold to a constant `false` and silently disable the signer
+// on the portal, taking QUIP_DEV_SIGNER, `?quipSigner` and the localStorage
+// toggle with it. The signer stays opt-in via those three explicit switches
+// instead.
 export function shouldInjectQuipSigner (): boolean {
-  // The page-memory seed provider is intentionally development-only. Query
-  // parameters and localStorage must never turn it on in a production bundle.
-  if (process.env.NODE_ENV === 'production') {
-    return false;
-  }
-
   return isEnabledValue(process.env.QUIP_DEV_SIGNER) ||
     isEnabledByQuery() ||
     isEnabledByStorage();
