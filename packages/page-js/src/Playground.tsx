@@ -168,6 +168,7 @@ function Playground ({ basePath, className = '' }: Props): React.ReactElement<Pr
             const iframeDoc = iframeRef.current.contentWindow.document;
 
             iframeDoc.open();
+            // eslint-disable-next-line deprecation/deprecation -- document.write resets the sandbox iframe synchronously; srcdoc would load asynchronously
             iframeDoc.write('<!DOCTYPE html><html><head></head><body></body></html>');
             iframeDoc.close();
 
