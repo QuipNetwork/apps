@@ -1,0 +1,3 @@
+[submodule "quip-validator"]
+	path = quip-validator
+	url = git@gitlab.com:quip.network/quip-validator.git
