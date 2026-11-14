@@ -11,8 +11,11 @@ export interface OwnershipProof {
 
 // Both old and new SDKs expose two setKeys arguments. Quip explicitly requires
 // ownership proofs; keep the existing empty-proof flow for other chains.
+// The testnet runtime build reports its own spec name.
+const QUIP_SPEC_NAMES = ['quip', 'quip-testnet'];
+
 export function requiresOwnershipProof (api: ApiPromise): boolean {
-  return api.runtimeVersion.specName.toString() === 'quip';
+  return QUIP_SPEC_NAMES.includes(api.runtimeVersion.specName.toString());
 }
 
 export function isNonEmptyHex (value: string | null | undefined): value is string {
