@@ -12,6 +12,7 @@ describe('session key ownership proof', () => {
     const api = (specName: string) => ({ runtimeVersion: { specName } }) as unknown as ApiPromise;
 
     expect(requiresOwnershipProof(api('quip'))).toEqual(true);
+    expect(requiresOwnershipProof(api('quip-testnet'))).toEqual(true);
     expect(requiresOwnershipProof(api('polkadot'))).toEqual(false);
   });
 
