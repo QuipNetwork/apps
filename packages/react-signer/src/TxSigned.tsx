@@ -57,6 +57,38 @@ const EMPTY_INNER: InnerTx = { innerHash: null, innerTx: null };
 
 let qrId = 0;
 
+interface QuipSignerUiApi {
+  canSign: (address: string) => boolean;
+}
+
+function quipSigningError (address: string | null): string | null {
+  if (!address) {
+    return null;
+  }
+
+  let source: unknown;
+
+  try {
+    source = keyring.getPair(address).meta.source;
+  } catch {
+    return null;
+  }
+
+  if (source !== 'quip') {
+    return null;
+  }
+
+  const quipSigner = (globalThis as unknown as { quipSigner?: QuipSignerUiApi }).quipSigner;
+
+  if (!quipSigner) {
+    return 'Quip signing is unavailable. Enable the development signer or connect a Quip signer.';
+  }
+
+  return quipSigner.canSign(address)
+    ? null
+    : 'This is a view-only Quip account. Its signing key is not available.';
+}
+
 function unlockAccount ({ isUnlockCached, signAddress, signPassword }: AddressProxy): string | null {
   let publicKey;
 
@@ -215,9 +247,15 @@ async function extractParams (api: ApiPromise, address: string, options: Partial
       throw new Error(`Unable to find injected source for ${address}`);
     }
 
+    const unavailable = quipSigningError(address);
+
+    if (unavailable) {
+      throw new Error(unavailable);
+    }
+
     const injected = await web3FromSource(source);
 
-    assert(injected, `Unable to find a signer for ${address}`);
+    assert(injected?.signer, `Injected signer "${source}" is unavailable for ${address}`);
 
     return ['signing', address, { ...options, signer: injected.signer }, false];
   }
@@ -256,7 +294,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
 
   useEffect((): void => {
     setFlags(tryExtract(senderInfo.signAddress));
-    setPasswordError(null);
+    setPasswordError(quipSigningError(senderInfo.signAddress));
   }, [senderInfo]);
 
   // when we are sending the hash only, get the wrapped call for display (proxies if required)
@@ -342,10 +380,24 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   const _onSend = useCallback(
     async (queueSetTxStatus: QueueTxMessageSetStatus, currentItem: QueueTx, senderInfo: AddressProxy): Promise<void> => {
       if (senderInfo.signAddress) {
-        const [tx, [status, pairOrAddress, options, isMockSign]] = await Promise.all([
-          wrapTx(api, currentItem, senderInfo),
-          extractParams(api, senderInfo.signAddress, { nonce: -1, tip, withSignedTransaction: true, ...signedOptions }, getLedger, setQrState)
-        ]);
+        let prepared: [SubmittableExtrinsic<'promise'>, ['qr' | 'signing', string, Partial<SignerOptions>, boolean]];
+
+        try {
+          prepared = await Promise.all([
+            wrapTx(api, currentItem, senderInfo),
+            extractParams(api, senderInfo.signAddress, { nonce: -1, tip, withSignedTransaction: true, ...signedOptions }, getLedger, setQrState)
+          ]);
+        } catch (error) {
+          // wrapTx/extractParams run before any status update — surface their
+          // failures (e.g. an unavailable signing key) on the queue item
+          // instead of leaving it pending, then rethrow so the modal's error
+          // handler still fires.
+          queueSetTxStatus(currentItem.id, 'error', {}, error as Error);
+
+          throw error;
+        }
+
+        const [tx, [status, pairOrAddress, options, isMockSign]] = prepared;
 
         queueSetTxStatus(currentItem.id, status);
 
@@ -358,10 +410,21 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   const _onSign = useCallback(
     async (queueSetTxStatus: QueueTxMessageSetStatus, currentItem: QueueTx, senderInfo: AddressProxy): Promise<void> => {
       if (senderInfo.signAddress) {
-        const [tx, [, pairOrAddress, options, isMockSign]] = await Promise.all([
-          wrapTx(api, currentItem, senderInfo),
-          extractParams(api, senderInfo.signAddress, { ...signedOptions, tip, withSignedTransaction: true }, getLedger, setQrState)
-        ]);
+        let prepared: [SubmittableExtrinsic<'promise'>, ['qr' | 'signing', string, Partial<SignerOptions>, boolean]];
+
+        try {
+          prepared = await Promise.all([
+            wrapTx(api, currentItem, senderInfo),
+            extractParams(api, senderInfo.signAddress, { ...signedOptions, tip, withSignedTransaction: true }, getLedger, setQrState)
+          ]);
+        } catch (error) {
+          // See _onSend: report pre-signing failures on the queue item.
+          queueSetTxStatus(currentItem.id, 'error', {}, error as Error);
+
+          throw error;
+        }
+
+        const [tx, [, pairOrAddress, options, isMockSign]] = prepared;
 
         setSignedTx(await signAsync(queueSetTxStatus, currentItem, tx, pairOrAddress, options, api, isMockSign));
       }
@@ -420,6 +483,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
   }, [flags.isQr, flags.isLocal, isSubmit, t]);
 
   const isAutoCapable = senderInfo.signAddress && (queueSize > 1) && isSubmit && !(flags.isHardware || flags.isMultisig || flags.isProxied || flags.isQr || flags.isUnlockable) && !isRenderError;
+  const isQuipSigningUnavailable = !!quipSigningError(senderInfo.signAddress);
 
   if (!isBusy && isAutoCapable && initialIsQueueSubmit) {
     setBusy(true);
@@ -508,7 +572,7 @@ function TxSigned ({ className, currentItem, isQueueSubmit, queueSize, requestAd
               : 'sign-in-alt'
           }
           isBusy={isBusy}
-          isDisabled={!senderInfo.signAddress || isRenderError}
+          isDisabled={!senderInfo.signAddress || isRenderError || isQuipSigningUnavailable}
           label={signLabel}
           onClick={_doStart}
           tabIndex={2}

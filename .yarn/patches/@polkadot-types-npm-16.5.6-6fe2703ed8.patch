@@ -1,0 +1,136 @@
+diff --git a/cjs/extrinsic/v4/ExtrinsicSignature.js b/cjs/extrinsic/v4/ExtrinsicSignature.js
+index d2809f1b7a761c2140ea82c132e22bc883ed3dbb..2d020950a8aa88f15541aa5d89cee849043bbb91 100644
+--- a/cjs/extrinsic/v4/ExtrinsicSignature.js
++++ b/cjs/extrinsic/v4/ExtrinsicSignature.js
+@@ -15,12 +15,16 @@ function toAddress(registry, address) {
+  * A container for the [[Signature]] associated with a specific [[Extrinsic]]
+  */
+ class GenericExtrinsicSignatureV4 extends types_codec_1.Struct {
++    #isSigned;
+     #signKeys;
+     constructor(registry, value, { isSigned } = {}) {
+         const signTypes = registry.getSignedExtensionTypes();
+         super(registry, (0, util_1.objectSpread)(
+         // eslint-disable-next-line sort-keys
+         { signer: 'Address', signature: 'ExtrinsicSignature' }, signTypes), GenericExtrinsicSignatureV4.decodeExtrinsicSignature(value, isSigned));
++        this.#isSigned = isSigned === undefined
++            ? !this.signature.isEmpty
++            : isSigned;
+         this.#signKeys = Object.keys(signTypes);
+         (0, util_1.objectProperties)(this, this.#signKeys, (k) => this.get(k));
+     }
+@@ -48,7 +52,7 @@ class GenericExtrinsicSignatureV4 extends types_codec_1.Struct {
+      * @description `true` if the signature is valid
+      */
+     get isSigned() {
+-        return !this.signature.isEmpty;
++        return this.#isSigned;
+     }
+     /**
+      * @description The [[ExtrinsicEra]] (mortal or immortal) this signature applies to
+@@ -117,6 +121,7 @@ class GenericExtrinsicSignatureV4 extends types_codec_1.Struct {
+         // additional fields (exposed in struct itself)
+         this.set('signer', signer);
+         this.set('signature', signature);
++        this.#isSigned = true;
+         return this;
+     }
+     /**
+diff --git a/cjs/extrinsic/v5/ExtrinsicSignature.js b/cjs/extrinsic/v5/ExtrinsicSignature.js
+index 10e370372d98a496aa8af1584d89c540b8db5ddf..2db1afa1ecfeabcbd3e419c27ad0114755b5217a 100644
+--- a/cjs/extrinsic/v5/ExtrinsicSignature.js
++++ b/cjs/extrinsic/v5/ExtrinsicSignature.js
+@@ -11,12 +11,16 @@ const ExtrinsicPayload_js_1 = require("./ExtrinsicPayload.js");
+  * A container for the [[Signature]] associated with a specific [[Extrinsic]]
+  */
+ class GenericExtrinsicSignatureV5 extends types_codec_1.Struct {
++    #isSigned;
+     #signKeys;
+     constructor(registry, value, { isSigned } = {}) {
+         const signTypes = registry.getSignedExtensionTypes();
+         super(registry, (0, util_1.objectSpread)(
+         // eslint-disable-next-line sort-keys
+         { signer: 'Address', signature: 'ExtrinsicSignature', transactionExtensionVersion: 'u8' }, signTypes), GenericExtrinsicSignatureV5.decodeExtrinsicSignature(value, isSigned));
++        this.#isSigned = isSigned === undefined
++            ? !this.signature.isEmpty
++            : isSigned;
+         this.#signKeys = Object.keys(signTypes);
+         (0, util_1.objectProperties)(this, this.#signKeys, (k) => this.get(k));
+     }
+@@ -44,7 +48,7 @@ class GenericExtrinsicSignatureV5 extends types_codec_1.Struct {
+      * @description `true` if the signature is valid
+      */
+     get isSigned() {
+-        return !this.signature.isEmpty;
++        return this.#isSigned;
+     }
+     /**
+      * @description The [[ExtrinsicEra]] (mortal or immortal) this signature applies to
+diff --git a/extrinsic/v4/ExtrinsicSignature.js b/extrinsic/v4/ExtrinsicSignature.js
+index ba67bdb4e530d0df4efce7615ef70f50026248e9..9fa3bf9e02dfe49e147e496b5a3d50a8ac81feec 100644
+--- a/extrinsic/v4/ExtrinsicSignature.js
++++ b/extrinsic/v4/ExtrinsicSignature.js
+@@ -12,12 +12,16 @@ function toAddress(registry, address) {
+  * A container for the [[Signature]] associated with a specific [[Extrinsic]]
+  */
+ export class GenericExtrinsicSignatureV4 extends Struct {
++    #isSigned;
+     #signKeys;
+     constructor(registry, value, { isSigned } = {}) {
+         const signTypes = registry.getSignedExtensionTypes();
+         super(registry, objectSpread(
+         // eslint-disable-next-line sort-keys
+         { signer: 'Address', signature: 'ExtrinsicSignature' }, signTypes), GenericExtrinsicSignatureV4.decodeExtrinsicSignature(value, isSigned));
++        this.#isSigned = isSigned === undefined
++            ? !this.signature.isEmpty
++            : isSigned;
+         this.#signKeys = Object.keys(signTypes);
+         objectProperties(this, this.#signKeys, (k) => this.get(k));
+     }
+@@ -45,7 +49,7 @@ export class GenericExtrinsicSignatureV4 extends Struct {
+      * @description `true` if the signature is valid
+      */
+     get isSigned() {
+-        return !this.signature.isEmpty;
++        return this.#isSigned;
+     }
+     /**
+      * @description The [[ExtrinsicEra]] (mortal or immortal) this signature applies to
+@@ -114,6 +118,7 @@ export class GenericExtrinsicSignatureV4 extends Struct {
+         // additional fields (exposed in struct itself)
+         this.set('signer', signer);
+         this.set('signature', signature);
++        this.#isSigned = true;
+         return this;
+     }
+     /**
+diff --git a/extrinsic/v5/ExtrinsicSignature.js b/extrinsic/v5/ExtrinsicSignature.js
+index 845a2f828b837f7d2340daaad6238b9ed12164a3..e0af841efab043f809835cf86b8e126c567ceffc 100644
+--- a/extrinsic/v5/ExtrinsicSignature.js
++++ b/extrinsic/v5/ExtrinsicSignature.js
+@@ -8,12 +8,16 @@ import { GenericExtrinsicPayloadV5 } from './ExtrinsicPayload.js';
+  * A container for the [[Signature]] associated with a specific [[Extrinsic]]
+  */
+ export class GenericExtrinsicSignatureV5 extends Struct {
++    #isSigned;
+     #signKeys;
+     constructor(registry, value, { isSigned } = {}) {
+         const signTypes = registry.getSignedExtensionTypes();
+         super(registry, objectSpread(
+         // eslint-disable-next-line sort-keys
+         { signer: 'Address', signature: 'ExtrinsicSignature', transactionExtensionVersion: 'u8' }, signTypes), GenericExtrinsicSignatureV5.decodeExtrinsicSignature(value, isSigned));
++        this.#isSigned = isSigned === undefined
++            ? !this.signature.isEmpty
++            : isSigned;
+         this.#signKeys = Object.keys(signTypes);
+         objectProperties(this, this.#signKeys, (k) => this.get(k));
+     }
+@@ -41,7 +45,7 @@ export class GenericExtrinsicSignatureV5 extends Struct {
+      * @description `true` if the signature is valid
+      */
+     get isSigned() {
+-        return !this.signature.isEmpty;
++        return this.#isSigned;
+     }
+     /**
+      * @description The [[ExtrinsicEra]] (mortal or immortal) this signature applies to

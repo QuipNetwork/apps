@@ -14,6 +14,14 @@ RUN npm install yarn -g
 WORKDIR /apps
 COPY . .
 
+# Quip hybrid dev signer, baked into the static bundle by default. webpack's
+# DefinePlugin reads this at build time (the same `process.env.QUIP_DEV_SIGNER`
+# initQuipSigner.ts checks), so it must be set before `yarn build:www` — exactly
+# like `QUIP_DEV_SIGNER=1 yarn start` locally. Override with
+# `--build-arg QUIP_DEV_SIGNER=` to build an image without the signer.
+ARG QUIP_DEV_SIGNER=1
+ENV QUIP_DEV_SIGNER=$QUIP_DEV_SIGNER
+
 RUN yarn && NODE_ENV=production yarn build:www
 
 # ===========================================================
