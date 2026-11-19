@@ -79,7 +79,7 @@
     "@types/store": "^2.0.5",
     "concurrently": "^8.2.2",
     "dnslink-cloudflare": "^3.0.0",
-    "electron": "41.10.7",
+    "electron": "42.11.18",
     "electron-builder": "26.15.3",
     "electron-builder-notarize": "^1.5.1",
     "extensionless": "^1.9.6",
@@ -126,6 +126,7 @@
     "@zondax/ledger-substrate/axios": "^1.20.0",
     "serialize-javascript": "^7.0.5",
     "tmp": "^0.2.6",
+    "tsup/esbuild": "^0.28.2",
     "typescript": "^5.5.4",
     "uuid": "^11.1.1",
     "webpack-dev-server": "^5.2.6"
