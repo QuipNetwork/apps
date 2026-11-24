@@ -1,0 +1,205 @@
+diff --git a/cjs/staking/erasExposure.js b/cjs/staking/erasExposure.js
+index 79512d91b1342e39ced5ff7a7d617e0ec8af5b8e..dd12d265be257c093f0261dea80fa88fd15e8906 100644
+--- a/cjs/staking/erasExposure.js
++++ b/cjs/staking/erasExposure.js
+@@ -7,6 +7,10 @@ const index_js_1 = require("../util/index.js");
+ const cache_js_1 = require("./cache.js");
+ const util_js_1 = require("./util.js");
+ const CACHE_KEY = 'eraExposure';
++// Quip: PagedExposureMetadata balances are Compact; unwrap them when they are.
++function unwrapBalance(b) {
++    return typeof b.unwrap === 'function' ? b.unwrap() : b;
++}
+ function mapStakersClipped(era, stakers) {
+     const nominators = {};
+     const validators = {};
+@@ -21,7 +25,7 @@ function mapStakersClipped(era, stakers) {
+     });
+     return { era, nominators, validators };
+ }
+-function mapStakersPaged(era, stakers) {
++function mapStakersPaged(api, era, stakers, overviews = []) {
+     const nominators = {};
+     const validators = {};
+     stakers.forEach(([key, exposureOpt]) => {
+@@ -36,6 +40,17 @@ function mapStakersPaged(era, stakers) {
+             });
+         }
+     });
++    // Quip: a validator without nominators has an ErasStakersOverview but no ErasStakersPaged page, and
++    // pallet-staking still pays its own stake as one page. Expose it as an Exposure of its own stake.
++    overviews.forEach(([key, overviewOpt]) => {
++        const validatorId = key.args[1].toString();
++        if (overviewOpt.isSome && !validators[validatorId]) {
++            const { own, pageCount, total } = overviewOpt.unwrap();
++            if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
++                validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
++            }
++        }
++    });
+     return { era, nominators, validators };
+ }
+ /**
+@@ -48,7 +63,12 @@ function _eraExposure(instanceId, api) {
+         return cached
+             ? (0, rxjs_1.of)(cached)
+             : api.query.staking.erasStakersPaged
+-                ? api.query.staking.erasStakersPaged.entries(era).pipe((0, rxjs_1.map)((r) => (0, cache_js_1.setEraCache)(cacheKey, withActive, mapStakersPaged(era, r))))
++                ? (0, rxjs_1.combineLatest)([
++                    api.query.staking.erasStakersPaged.entries(era),
++                    api.query.staking.erasStakersOverview
++                        ? api.query.staking.erasStakersOverview.entries(era)
++                        : (0, rxjs_1.of)([])
++                ]).pipe((0, rxjs_1.map)(([r, o]) => (0, cache_js_1.setEraCache)(cacheKey, withActive, mapStakersPaged(api, era, r, o))))
+                 : api.query.staking.erasStakersClipped.entries(era).pipe((0, rxjs_1.map)((r) => (0, cache_js_1.setEraCache)(cacheKey, withActive, mapStakersClipped(era, r))));
+     });
+ }
+diff --git a/cjs/staking/query.js b/cjs/staking/query.js
+index d13852e19eae83312e432cd0b95be235f18a606e..dde21af1b0e34f394b10fdbece8ea56177b1a1dc 100644
+--- a/cjs/staking/query.js
++++ b/cjs/staking/query.js
+@@ -13,6 +13,10 @@ function rewardDestinationCompat(rewardDestination) {
+ function filterClaimedRewards(api, cl) {
+     return api.registry.createType('Vec<u32>', cl.filter((c) => c !== -1));
+ }
++// Quip: PagedExposureMetadata balances are Compact; unwrap them when they are.
++function unwrapBalance(b) {
++    return typeof b.unwrap === 'function' ? b.unwrap() : b;
++}
+ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+     const claimedData = {};
+     const overviewData = {};
+@@ -35,11 +39,11 @@ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+         const era = keys.args[0].toNumber();
+         if (ids.includes(id) && overview.isSome) {
+             if (overviewData[id]) {
+-                overviewData[id].set(era, overview.unwrap().pageCount);
++                overviewData[id].set(era, overview.unwrap());
+             }
+             else {
+                 overviewData[id] = new Map();
+-                overviewData[id].set(era, overview.unwrap().pageCount);
++                overviewData[id].set(era, overview.unwrap());
+             }
+         }
+     });
+@@ -49,8 +53,13 @@ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+         return eras.map((era) => {
+             if (rewardsPerEra && rewardsPerEra.has(era) && overviewPerEra && overviewPerEra.has(era)) {
+                 const rewards = rewardsPerEra.get(era);
+-                const pageCount = overviewPerEra.get(era);
+-                return rewards.length === pageCount.toNumber()
++                const overview = overviewPerEra.get(era);
++                // Quip: pallet-staking's EraInfo::get_page_count counts a validator's own stake as one page when it
++                // has no nominator pages (page_count 0), so a claimed page 0 means the era is claimed.
++                const pageCount = overview.pageCount.isZero() && !unwrapBalance(overview.own).isZero()
++                    ? 1
++                    : overview.pageCount.toNumber();
++                return rewards.length === pageCount
+                     ? era
+                     : -1;
+             }
+diff --git a/staking/erasExposure.js b/staking/erasExposure.js
+index 31f26b4befa77ba2b19333bab5d401c7fb891b67..e917415d31ac839ea74edf0abf1be4c86eab6b26 100644
+--- a/staking/erasExposure.js
++++ b/staking/erasExposure.js
+@@ -1,8 +1,12 @@
+-import { map, of } from 'rxjs';
++import { combineLatest, map, of } from 'rxjs';
+ import { memo } from '../util/index.js';
+ import { getEraCache, setEraCache } from './cache.js';
+ import { combineEras, erasHistoricApply, singleEra } from './util.js';
+ const CACHE_KEY = 'eraExposure';
++// Quip: PagedExposureMetadata balances are Compact; unwrap them when they are.
++function unwrapBalance(b) {
++    return typeof b.unwrap === 'function' ? b.unwrap() : b;
++}
+ function mapStakersClipped(era, stakers) {
+     const nominators = {};
+     const validators = {};
+@@ -17,7 +21,7 @@ function mapStakersClipped(era, stakers) {
+     });
+     return { era, nominators, validators };
+ }
+-function mapStakersPaged(era, stakers) {
++function mapStakersPaged(api, era, stakers, overviews = []) {
+     const nominators = {};
+     const validators = {};
+     stakers.forEach(([key, exposureOpt]) => {
+@@ -32,6 +36,17 @@ function mapStakersPaged(era, stakers) {
+             });
+         }
+     });
++    // Quip: a validator without nominators has an ErasStakersOverview but no ErasStakersPaged page, and
++    // pallet-staking still pays its own stake as one page. Expose it as an Exposure of its own stake.
++    overviews.forEach(([key, overviewOpt]) => {
++        const validatorId = key.args[1].toString();
++        if (overviewOpt.isSome && !validators[validatorId]) {
++            const { own, pageCount, total } = overviewOpt.unwrap();
++            if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
++                validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
++            }
++        }
++    });
+     return { era, nominators, validators };
+ }
+ /**
+@@ -44,7 +59,12 @@ export function _eraExposure(instanceId, api) {
+         return cached
+             ? of(cached)
+             : api.query.staking.erasStakersPaged
+-                ? api.query.staking.erasStakersPaged.entries(era).pipe(map((r) => setEraCache(cacheKey, withActive, mapStakersPaged(era, r))))
++                ? combineLatest([
++                    api.query.staking.erasStakersPaged.entries(era),
++                    api.query.staking.erasStakersOverview
++                        ? api.query.staking.erasStakersOverview.entries(era)
++                        : of([])
++                ]).pipe(map(([r, o]) => setEraCache(cacheKey, withActive, mapStakersPaged(api, era, r, o))))
+                 : api.query.staking.erasStakersClipped.entries(era).pipe(map((r) => setEraCache(cacheKey, withActive, mapStakersClipped(era, r))));
+     });
+ }
+diff --git a/staking/query.js b/staking/query.js
+index 42a4fd78d892ca8b7b98e18bd35dbd6b3bd02649..8422ba9c37316d215b3a316faf50367aebff8438 100644
+--- a/staking/query.js
++++ b/staking/query.js
+@@ -9,6 +9,10 @@ function rewardDestinationCompat(rewardDestination) {
+ function filterClaimedRewards(api, cl) {
+     return api.registry.createType('Vec<u32>', cl.filter((c) => c !== -1));
+ }
++// Quip: PagedExposureMetadata balances are Compact; unwrap them when they are.
++function unwrapBalance(b) {
++    return typeof b.unwrap === 'function' ? b.unwrap() : b;
++}
+ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+     const claimedData = {};
+     const overviewData = {};
+@@ -31,11 +35,11 @@ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+         const era = keys.args[0].toNumber();
+         if (ids.includes(id) && overview.isSome) {
+             if (overviewData[id]) {
+-                overviewData[id].set(era, overview.unwrap().pageCount);
++                overviewData[id].set(era, overview.unwrap());
+             }
+             else {
+                 overviewData[id] = new Map();
+-                overviewData[id].set(era, overview.unwrap().pageCount);
++                overviewData[id].set(era, overview.unwrap());
+             }
+         }
+     });
+@@ -45,8 +49,13 @@ function filterRewards(stashIds, eras, claimedRewards, stakersOverview) {
+         return eras.map((era) => {
+             if (rewardsPerEra && rewardsPerEra.has(era) && overviewPerEra && overviewPerEra.has(era)) {
+                 const rewards = rewardsPerEra.get(era);
+-                const pageCount = overviewPerEra.get(era);
+-                return rewards.length === pageCount.toNumber()
++                const overview = overviewPerEra.get(era);
++                // Quip: pallet-staking's EraInfo::get_page_count counts a validator's own stake as one page when it
++                // has no nominator pages (page_count 0), so a claimed page 0 means the era is claimed.
++                const pageCount = overview.pageCount.isZero() && !unwrapBalance(overview.own).isZero()
++                    ? 1
++                    : overview.pageCount.toNumber();
++                return rewards.length === pageCount
+                     ? era
+                     : -1;
+             }
