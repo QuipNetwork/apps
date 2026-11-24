@@ -6,13 +6,14 @@
   "runtimeVersion": "22",
   "installCommand": "corepack enable && yarn install --immutable",
   "buildCommand": "yarn build:www",
-  "runCommand": "env NO_UPDATE_CHECK=1 node_modules/.bin/serve -s packages/apps/build -l tcp://0.0.0.0:80",
+  "runCommand": "fuser -k 80/tcp; sleep 1; if [ -x node_modules/.bin/serve ]; then exec node_modules/.bin/serve -s packages/apps/build -l tcp://0.0.0.0:80; else exec npx -y serve -s packages/apps/build -l tcp://0.0.0.0:80; fi",
   "outputDir": "packages/apps/build",
   "appPort": 80,
   "envVars": [
     { "key": "QUIP_DEV_SIGNER", "value": "1" },
     { "key": "WS_URL", "value": "wss://bootnode-1.aglais.quip.network:20049/rpc" },
-    { "key": "BUILD_TIMEOUT", "value": "5400" }
+    { "key": "BUILD_TIMEOUT", "value": "5400" },
+    { "key": "NO_UPDATE_CHECK", "value": "1" }
   ],
   "instances": 3,
   "cpu": 2,
