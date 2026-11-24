@@ -2116,7 +2116,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@polkadot/api-derive@npm:^16.5.6":
+"@polkadot/api-derive@npm:16.5.6":
   version: 16.5.6
   resolution: "@polkadot/api-derive@npm:16.5.6"
   dependencies:
@@ -2131,6 +2131,24 @@ __metadata:
     rxjs: "npm:^7.8.1"
     tslib: "npm:^2.8.1"
   checksum: 10/493be1bfa7807d6c39f8bef9569f1d5ae9e87e2330bd561a2dcf59a3bfec71c2cd260e33005c752d17a6e24195184e18db7a1a80309af9738bb0070a7f3b90db
+  languageName: node
+  linkType: hard
+
+"@polkadot/api-derive@patch:@polkadot/api-derive@npm%3A16.5.6#~/.yarn/patches/@polkadot-api-derive-npm-16.5.6-e810bfd3f9.patch":
+  version: 16.5.6
+  resolution: "@polkadot/api-derive@patch:@polkadot/api-derive@npm%3A16.5.6#~/.yarn/patches/@polkadot-api-derive-npm-16.5.6-e810bfd3f9.patch::version=16.5.6&hash=46f354"
+  dependencies:
+    "@polkadot/api": "npm:16.5.6"
+    "@polkadot/api-augment": "npm:16.5.6"
+    "@polkadot/api-base": "npm:16.5.6"
+    "@polkadot/rpc-core": "npm:16.5.6"
+    "@polkadot/types": "npm:16.5.6"
+    "@polkadot/types-codec": "npm:16.5.6"
+    "@polkadot/util": "npm:^14.0.3"
+    "@polkadot/util-crypto": "npm:^14.0.3"
+    rxjs: "npm:^7.8.1"
+    tslib: "npm:^2.8.1"
+  checksum: 10/1ff2a219d26d2dc072799e4011f59b255831fda0f9d2af9b13ce4c388711ea50b47a09478b88c062bd598c8ae3097befa75dc655654cfcba0f4d23f68367d8ac
   languageName: node
   linkType: hard
 

@@ -5,7 +5,7 @@ import type { ApiPromise } from '@polkadot/api';
 import type { QueryableStorageMultiArg } from '@polkadot/api/types';
 import type { DeriveEraExposure, DeriveEraNominatorExposure, DeriveEraValidatorExposurePaged, DeriveSessionIndexes } from '@polkadot/api-derive/types';
 import type { Option, u16, u32 } from '@polkadot/types';
-import type { EraIndex, Exposure, Nominations, SlashingSpans } from '@polkadot/types/interfaces';
+import type { EraIndex, Exposure, IndividualExposure, Nominations, SlashingSpans } from '@polkadot/types/interfaces';
 
 import { useEffect, useState } from 'react';
 
@@ -27,7 +27,8 @@ interface ExtractStateParams {
   nominees: string[];
   activeEra: EraIndex| undefined;
   submittedIn: EraIndex;
-  exposures: Exposure[];
+  // one entry per nominee, in the same order; undefined when the nominee has no exposure in the active era
+  exposures: (Exposure | undefined)[];
   version: number | undefined;
   allNominators?: DeriveEraNominatorExposure;
   activeValidators?: DeriveEraValidatorExposurePaged;
@@ -62,8 +63,8 @@ function extractState (params: ExtractStateParams): Inactives {
    * - validators that have been nominated by more than max accounts
    */
   const nomsOver = exposures
-    .map(({ others }) =>
-      others.sort((a, b) => (b.value?.unwrap() || BN_ZERO).cmp(a.value?.unwrap() || BN_ZERO))
+    .map((exposure): IndividualExposure[] =>
+      [...(exposure?.others || [])].sort((a, b) => (b.value?.unwrap() || BN_ZERO).cmp(a.value?.unwrap() || BN_ZERO))
     )
     .map((others, index) =>
       !max || max.gtn(others.map(({ who }) => who.toString()).indexOf(stashId))
@@ -73,7 +74,7 @@ function extractState (params: ExtractStateParams): Inactives {
     .filter((nominee): nominee is string => !!nominee && !nomsChilled.includes(nominee));
 
   // first a blanket find of nominations not in the active set
-  const inactiveValidators = exposures.map((exposure, index) => exposure.others.some(({ who }) => who.eq(stashId)) ? null : nominees[index])
+  const inactiveValidators = exposures.map((exposure, index) => exposure?.others.some(({ who }) => who.eq(stashId)) ? null : nominees[index])
     .filter((nominee): nominee is string => !!nominee);
 
   /**
@@ -118,7 +119,7 @@ function extractState (params: ExtractStateParams): Inactives {
    * For staking pallet lower than version 14
    */
   nomsWaiting = exposures.map((exposure, index) =>
-    exposure.total?.unwrap().isZero() || (
+    exposure?.total?.unwrap().isZero() || (
       inactiveValidators.includes(nominees[index]) &&
       // it could be activeEra + 1 (currentEra for last session)
       submittedIn.gte(activeEra)
@@ -160,9 +161,11 @@ function useInactivesImpl (stashId: string, nominees?: string[], eraExposure?: D
       return;
     }
 
-    const exposuresData = nominees?.map((id) => eraExposure?.validators?.[id]).filter((val) => val) as Exposure[];
+    // Keep one entry per nominee, so the indexes line up with nominees. Nominees without an exposure in the
+    // active era stay undefined: with none at all, the state must still resolve, or the list spins forever.
+    const exposuresData = nominees?.map((id) => eraExposure?.validators?.[id] as Exposure | undefined);
 
-    mountedRef.current && exposuresData?.length && nominees?.length && !!submittedIn && setState(
+    mountedRef.current && exposuresData && nominees?.length && !!submittedIn && setState(
       extractState({
         activeEra: indexes?.activeEra,
         activeValidators: eraExposure?.validators,
