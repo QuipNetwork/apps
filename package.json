@@ -88,6 +88,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-is": "^18.2.0",
+    "serve": "14.2.6",
     "source-map-explorer": "^2.5.3"
   },
   "resolutions": {

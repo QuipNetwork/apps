@@ -6,7 +6,7 @@
   "runtimeVersion": "22",
   "installCommand": "corepack enable && yarn install --immutable",
   "buildCommand": "yarn build:www",
-  "runCommand": "npx -y serve -s packages/apps/build -l tcp://0.0.0.0:80",
+  "runCommand": "env NO_UPDATE_CHECK=1 node_modules/.bin/serve -s packages/apps/build -l tcp://0.0.0.0:80",
   "outputDir": "packages/apps/build",
   "appPort": 80,
   "envVars": [
