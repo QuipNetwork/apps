@@ -1,5 +1,5 @@
 diff --git a/cjs/staking/erasExposure.js b/cjs/staking/erasExposure.js
-index 79512d91b1342e39ced5ff7a7d617e0ec8af5b8e..dd12d265be257c093f0261dea80fa88fd15e8906 100644
+index 79512d91b1342e39ced5ff7a7d617e0ec8af5b8e..29f2c2cb34fea874e981b00f1c9c69fd77d22def 100644
 --- a/cjs/staking/erasExposure.js
 +++ b/cjs/staking/erasExposure.js
 @@ -7,6 +7,10 @@ const index_js_1 = require("../util/index.js");
@@ -13,7 +13,7 @@ index 79512d91b1342e39ced5ff7a7d617e0ec8af5b8e..dd12d265be257c093f0261dea80fa88f
  function mapStakersClipped(era, stakers) {
      const nominators = {};
      const validators = {};
-@@ -21,7 +25,7 @@ function mapStakersClipped(era, stakers) {
+@@ -21,14 +25,16 @@ function mapStakersClipped(era, stakers) {
      });
      return { era, nominators, validators };
  }
@@ -21,26 +21,41 @@ index 79512d91b1342e39ced5ff7a7d617e0ec8af5b8e..dd12d265be257c093f0261dea80fa88f
 +function mapStakersPaged(api, era, stakers, overviews = []) {
      const nominators = {};
      const validators = {};
++    const pageOthers = {};
      stakers.forEach(([key, exposureOpt]) => {
-@@ -36,6 +40,17 @@ function mapStakersPaged(era, stakers) {
+         if (exposureOpt.isSome) {
+             const validatorId = key.args[1].toString();
+             const exposure = exposureOpt.unwrap();
+             validators[validatorId] = exposure;
++            pageOthers[validatorId] = (pageOthers[validatorId] || []).concat(exposure.others.toArray());
+             exposure.others.forEach(({ who }, validatorIndex) => {
+                 const nominatorId = who.toString();
+                 nominators[nominatorId] = nominators[nominatorId] || [];
+@@ -36,6 +42,23 @@ function mapStakersPaged(era, stakers) {
              });
          }
      });
-+    // Quip: a validator without nominators has an ErasStakersOverview but no ErasStakersPaged page, and
-+    // pallet-staking still pays its own stake as one page. Expose it as an Exposure of its own stake.
++    // Quip: build each validator's era exposure the way pallet-staking pays it: total and own from its
++    // ErasStakersOverview, plus the nominators of all its pages. A page alone carries only pageTotal (its
++    // nominators' stake), which made each nominator's share too large and left the validator's own stake out
++    // of its reward. A validator without nominators has an overview but no page, and is paid its own stake.
 +    overviews.forEach(([key, overviewOpt]) => {
++        if (!overviewOpt.isSome) {
++            return;
++        }
 +        const validatorId = key.args[1].toString();
-+        if (overviewOpt.isSome && !validators[validatorId]) {
-+            const { own, pageCount, total } = overviewOpt.unwrap();
-+            if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
-+                validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
-+            }
++        const { own, pageCount, total } = overviewOpt.unwrap();
++        if (validators[validatorId]) {
++            validators[validatorId] = api.registry.createType('Exposure', { others: pageOthers[validatorId], own, total });
++        }
++        else if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
++            validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
 +        }
 +    });
      return { era, nominators, validators };
  }
  /**
-@@ -48,7 +63,12 @@ function _eraExposure(instanceId, api) {
+@@ -48,7 +71,12 @@ function _eraExposure(instanceId, api) {
          return cached
              ? (0, rxjs_1.of)(cached)
              : api.query.staking.erasStakersPaged
@@ -161,7 +176,7 @@ index 55c51b834ecd03e536aab96fd977cdb951fbfc84..09cb43bc08c3d1ed1fda98aca15ddfb4
  function _stakerRewardsEras(instanceId, api) {
      return (0, index_js_1.memo)(instanceId, (eras, withActive = false) => (0, rxjs_1.combineLatest)([
 diff --git a/staking/erasExposure.js b/staking/erasExposure.js
-index 31f26b4befa77ba2b19333bab5d401c7fb891b67..e917415d31ac839ea74edf0abf1be4c86eab6b26 100644
+index 31f26b4befa77ba2b19333bab5d401c7fb891b67..7394a9915ab95f3dfe130a8a42d9bd3d628d39ee 100644
 --- a/staking/erasExposure.js
 +++ b/staking/erasExposure.js
 @@ -1,8 +1,12 @@
@@ -178,7 +193,7 @@ index 31f26b4befa77ba2b19333bab5d401c7fb891b67..e917415d31ac839ea74edf0abf1be4c8
  function mapStakersClipped(era, stakers) {
      const nominators = {};
      const validators = {};
-@@ -17,7 +21,7 @@ function mapStakersClipped(era, stakers) {
+@@ -17,14 +21,16 @@ function mapStakersClipped(era, stakers) {
      });
      return { era, nominators, validators };
  }
@@ -186,26 +201,41 @@ index 31f26b4befa77ba2b19333bab5d401c7fb891b67..e917415d31ac839ea74edf0abf1be4c8
 +function mapStakersPaged(api, era, stakers, overviews = []) {
      const nominators = {};
      const validators = {};
++    const pageOthers = {};
      stakers.forEach(([key, exposureOpt]) => {
-@@ -32,6 +36,17 @@ function mapStakersPaged(era, stakers) {
+         if (exposureOpt.isSome) {
+             const validatorId = key.args[1].toString();
+             const exposure = exposureOpt.unwrap();
+             validators[validatorId] = exposure;
++            pageOthers[validatorId] = (pageOthers[validatorId] || []).concat(exposure.others.toArray());
+             exposure.others.forEach(({ who }, validatorIndex) => {
+                 const nominatorId = who.toString();
+                 nominators[nominatorId] = nominators[nominatorId] || [];
+@@ -32,6 +38,23 @@ function mapStakersPaged(era, stakers) {
              });
          }
      });
-+    // Quip: a validator without nominators has an ErasStakersOverview but no ErasStakersPaged page, and
-+    // pallet-staking still pays its own stake as one page. Expose it as an Exposure of its own stake.
++    // Quip: build each validator's era exposure the way pallet-staking pays it: total and own from its
++    // ErasStakersOverview, plus the nominators of all its pages. A page alone carries only pageTotal (its
++    // nominators' stake), which made each nominator's share too large and left the validator's own stake out
++    // of its reward. A validator without nominators has an overview but no page, and is paid its own stake.
 +    overviews.forEach(([key, overviewOpt]) => {
++        if (!overviewOpt.isSome) {
++            return;
++        }
 +        const validatorId = key.args[1].toString();
-+        if (overviewOpt.isSome && !validators[validatorId]) {
-+            const { own, pageCount, total } = overviewOpt.unwrap();
-+            if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
-+                validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
-+            }
++        const { own, pageCount, total } = overviewOpt.unwrap();
++        if (validators[validatorId]) {
++            validators[validatorId] = api.registry.createType('Exposure', { others: pageOthers[validatorId], own, total });
++        }
++        else if (pageCount.isZero() && !unwrapBalance(own).isZero()) {
++            validators[validatorId] = api.registry.createType('Exposure', { others: [], own, total });
 +        }
 +    });
      return { era, nominators, validators };
  }
  /**
-@@ -44,7 +59,12 @@ export function _eraExposure(instanceId, api) {
+@@ -44,7 +67,12 @@ export function _eraExposure(instanceId, api) {
          return cached
              ? of(cached)
              : api.query.staking.erasStakersPaged
